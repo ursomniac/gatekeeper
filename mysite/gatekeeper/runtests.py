@@ -1,88 +1,75 @@
-#!/usr/bin/env python3
-import glob
+"""
+A standalone test runner script, configuring the minimum settings
+required for tests to execute.
+Re-use at your own risk: many Django applications will require full
+settings and/or templates in order to execute their tests, while
+pwned-passwords-django does not.
+"""
+
 import os
 import sys
 
-import django
-from django.conf import settings
-from django.core.management import execute_from_command_line
+
+# Make sure the app is (at least temporarily) on the import path.
+APP_DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, APP_DIR)
 
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-sys.path.append(os.path.abspath(os.path.join(BASE_DIR, '..')))
-
-# Unfortunately, apps can not be installed via ``modify_settings``
-# decorator, because it would miss the database setup.
-CUSTOM_INSTALLED_APPS = (
-    'foo',
-    'django.contrib.admin',
-)
-
-ALWAYS_INSTALLED_APPS = (
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-)
-
-ALWAYS_MIDDLEWARE_CLASSES = (
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-)
-
-
-settings.configure(
-    SECRET_KEY="django_tests_secret_key",
-    DEBUG=False,
-    TEMPLATE_DEBUG=False,
-    ALLOWED_HOSTS=[],
-    INSTALLED_APPS=ALWAYS_INSTALLED_APPS + CUSTOM_INSTALLED_APPS,
-    MIDDLEWARE_CLASSES=ALWAYS_MIDDLEWARE_CLASSES,
-    ROOT_URLCONF='tests.urls',
-    DATABASES={
+# Technically, pwned-passwords-django does not require any of these
+# settings; it doesn't even need to be in INSTALLED_APPS in order to
+# work.
+#
+# However, Django itself requires DATABASES and ROOT_URLCONF to be
+# set, Django's system-check framework will raise warnings if no value
+# is provided for MIDDLEWARE, and the Django test runner needs your
+# app to be in INSTALLED_APPS in order to work.
+SETTINGS_DICT = {
+    'INSTALLED_APPS': ('gatekeeper',),
+    'ROOT_URLCONF': 'tests.urls',
+    'DATABASES': {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-        }
+            'NAME': ':memory:',
+        },
     },
-    LANGUAGE_CODE='en-us',
-    TIME_ZONE='UTC',
-    USE_I18N=True,
-    USE_L10N=True,
-    USE_TZ=True,
-    STATIC_URL='/static/',
-    # Use a fast hasher to speed up tests.
-    PASSWORD_HASHERS=(
-        'django.contrib.auth.hashers.MD5PasswordHasher',
-    ),
-    FIXTURE_DIRS=glob.glob(BASE_DIR + '/' + '*/fixtures/')
+    'LOGGING': {
+        'version': 1,
+        'disable_existing_loggers': True,
+        'handlers': {
+            'null': {
+                'class': 'logging.NullHandler',
+            },
+        },
+        'loggers': {
+            'gatekeeper.api': {
+                'handlers': ['null'],
+                'propagate': False,
+            },
+        },
+    },
+}
 
-)
 
-django.setup()
-args = [sys.argv[0], 'test']
-# Current module (``tests``) and its submodules.
-test_cases = '.'
+def run_tests():
+    # Making Django run this way is a two-step process. First, call
+    # settings.configure() to give Django settings to work with:
+    from django.conf import settings
+    settings.configure(**SETTINGS_DICT)
 
-# Allow accessing test options from the command line.
-offset = 1
-try:
-    sys.argv[1]
-except IndexError:
-    pass
-else:
-    option = sys.argv[1].startswith('-')
-    if not option:
-        test_cases = sys.argv[1]
-        offset = 2
+    # Then, call django.setup() to initialize the application registry
+    # and other bits:
+    import django
+    django.setup()
 
-args.append(test_cases)
-# ``verbosity`` can be overwritten from command line.
-args.append('--verbosity=2')
-args.extend(sys.argv[offset:])
+    # Now we instantiate a test runner...
+    from django.test.utils import get_runner
+    TestRunner = get_runner(settings)
 
-execute_from_command_line(args)
+    # And then we run tests and return the results.
+    test_runner = TestRunner(verbosity=2, interactive=True)
+    failures = test_runner.run_tests(['tests'])
+    sys.exit(failures)
+
+
+if __name__ == '__main__':
+    run_tests()
