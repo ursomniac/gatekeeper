@@ -8,7 +8,7 @@ from django.views.generic.base import ContextMixin
 from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.list import MultipleObjectMixin
 
-from .gatekeeper import can_object_page_be_shown, get_appropriate_object_from_model
+from .utils import can_object_page_be_shown, get_appropriate_object_from_model
 
 """
 
@@ -98,7 +98,7 @@ class GatekeeperSerialMixin(SingleObjectMixin, GatekeeperAuthenticationMixin):
     """
         
     def get_object(self, queryset=None):
-        obj = super(GatekeeperSerialMixin, self).get_object(queryset=queryset)
+        #obj = super(GatekeeperSerialMixin, self).get_object(queryset=queryset)
 
         if self.kwargs.get('pk') and self.request.user.is_staff:
             result = get_object_or_404(self.model, id=self.kwargs.get('pk'))

@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
+from .utils import can_object_page_be_shown_to_pubilc
 
 PUBLISH_STATUS_LIST = (
     (-1, 'NEVER Available'),
@@ -51,6 +52,10 @@ class GatekeeperAbstractModel(models.Model):
     
     ### This sets up the ability for gatekeeping hierarchies.
     parental_model_field = None
+    
+    def __available_to_public(self):
+        return can_object_page_be_shown_to_pubilc(self)
+    available_to_public = property(__available_to_public)
     
     class Meta:
         abstract = True

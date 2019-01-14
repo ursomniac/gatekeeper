@@ -1,0 +1,18 @@
+<html>
+<head>
+    <title>Article Listing Page</title>
+</head>
+<body>
+    <h1>This is the article listing page</h1>
+    <h2>These are the articles that are available:</h2>
+    
+    <table>
+        <tr><th>PK</th><th>Title</th><th>Status</th><th>Live as of</th></tr>
+        {% for a in articles %}
+            <tr><td>{{ a.pk }}</td><td>{{ a.title }}</td>
+                    <td>{{ a.publish_status }}</td><td>{{ a.live_as_of }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

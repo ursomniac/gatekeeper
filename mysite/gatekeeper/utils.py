@@ -114,6 +114,8 @@ def can_object_page_be_shown(user, this_object, including_parents=False):
         
     return True
     
+def can_object_page_be_shown_to_pubilc(this_object):
+    return can_object_page_be_shown(None, this_object, including_parents=False)
 
 def get_appropriate_object_from_model(this_model):
     """

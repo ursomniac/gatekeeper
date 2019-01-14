@@ -3,9 +3,9 @@ from django.utils.safestring import mark_safe
 import pytz
 from collections import OrderedDict
 from datetime import datetime
-from .gatekeeper import get_appropriate_object_from_model
+from .utils import get_appropriate_object_from_model
 
-BASIC_FIELDS  = ((('publish_status', 'show_publish_status'), 'live_as_of', ))
+BASIC_FIELDS  = ((('publish_status', 'show_publish_status', 'available_to_public'), 'live_as_of', ))
 SERIAL_FIELDS = ((('publish_status', 'show_publish_status', 'is_live'), 'live_as_of', 'default_live'))
 
 def reset_fieldsets(orig, new):
@@ -49,13 +49,13 @@ class GatekeeperGenericAdmin(admin.ModelAdmin):
         x = self.list_display
         if x is None:
             x = ['pk',]
-        return x + ['show_publish_status', 'is_live']
+        return x + ['show_publish_status','available_to_public']
     
     def get_readonly_fields(self, request, obj=None):
         """
         Add these to the readonly_fields so that they can be used within the admin.
         """
-        return self.readonly_fields + ('show_publish_status', 'is_live')
+        return self.readonly_fields + ('show_publish_status',)
         
     def get_actions(self, request):
         actions = super(GatekeeperGenericAdmin, self).get_actions(request)
@@ -118,6 +118,8 @@ class GatekeeperGenericAdmin(admin.ModelAdmin):
             item.save() 
     take_offline.short_description = 'Take item COMPLETELY OFFLINE'
     
+    ### Custom methods
+
     class Meta:
         abstract = True
         
@@ -134,6 +136,22 @@ class GatekeeperSerialAdmin(GatekeeperGenericAdmin):
         gatekeeper_fieldset_entry = ['Gatekeeper', {'fields': SERIAL_FIELDS, }]
         return reset_fieldsets(self.fieldsets, gatekeeper_fieldset_entry)
 
+    def get_list_display(self, request):
+        """
+        The default will be to add show_publish_status and is_live to the list_display.
+        One can turn this off by making a custom get_list_display.
+        """
+        x = self.list_display
+        if x is None:
+            x = ['pk',]
+        return x + ['show_publish_status', 'is_live', 'default_live']
+        
+    def get_readonly_fields(self, request, obj=None):
+        """
+        Add these to the readonly_fields so that they can be used within the admin.
+        """
+        return self.readonly_fields + ('is_live',)
+        
     ### Custom methods
     def is_live(self, obj):
         """
