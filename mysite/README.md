@@ -152,3 +152,53 @@ How does it do that?
     Rule 4: Barring THAT - pick the most-recently modified page with `publish_status` != -1 that has `default_live` = True.
             
     Rule 5: Barring THAT - None (and 404).
+
+Note Rule #4 --- this is where the `default_live` field comes into play.   You can define a model instance with `default_live` = True.  This item will be return if no other instance passes the rules.  Basically it's can be a generic "fall back" for the model so that the public page ALWAYS returns something.   Handy!
+
+## The Admin Interface
+
+Gatekeeper alters the default Admin for models that use it.
+
+### List Display
+
+For the basic gatekeeper, two fields are added to the `list_display` (they'll appear after anything set in the ModelAdmin):
+
+1. A `show_publish_status` that takes the `live_as_of` and `publish_status` fields and creates a human-friendly string from them;
+2. A `available_to_public` model property that returns True/False to show "is this available to the public"?
+
+For the "serial" gatekeeper, there are also two fields:
+
+1. `show_public_status` as before
+2. `is_live` - returns True/False to show which item is the one that will appear on the live site.
+
+### Fieldsets
+
+All Gatekeeper-related fields are displayed on the model Admin edit page in a fieldset called "Gatekeeper".
+
+### Admin actions
+
+For convenience in the listing page of the Admin, five Admin actions have been defined:
+
+1. "Revert to Preview/Pending status":   this sets `live_as_of` and `publish_status` to None.   The item is no longer live, and won't go live until these values are changed;
+2. "Take Item PERMANENTLY LIVE": this sets `publish_status` = 1 --- the item will be live;
+3. "Take Live as of Right Now":  this sets `live_as_of` = "now", and `publish_status` = 0 --- the item will be live;
+4. "CONDITIONALLY online using `live_as_of` date": this sets `publish_status = 0` and keeps `live_as_of` to whatever it was before.   You'd use this if you wanted to change a PERMANENTLY LIVE or COMPLETELY OFFLINE setting;
+5. "Take item COMPLETELY OFFLINE": this sets `publish_status` = -1 --- the item disappears from the site entirely.
+
+
+## Parental Gatekeeping
+
+(To be added from the PBSMM test case)
+
+Sometimes you have a model that has a FK relationship to another model, and you want both of them to be under gate-keeping.   If "parent" model A's gatekeeping should influence model B, you can set things to override model B based upon the settings for model A.
+
+For example, if you have models for Author and Book, you can set it up that if the Author is not live, then NONE of the Books are live either.   This is convenient for sites where you might want to take several pages live all at once.
+
+## "Standalone" items
+
+(To be added from the PBSMM test case)
+
+BUT sometimes you do NOT want the parent model to control its children.   Standalone models will NOT check their parents for permission.
+
+For example you MIGHT want to limit the Books shown for a specific Author EXCEPT for this ONE Book.    So you can set `treat_as_standalone` for that one Book, and depending on the `live_as_of` and `publish_status` settings it will be "live" or not, WITHOUT checking to see what the same values are for that Book's Author.
+
